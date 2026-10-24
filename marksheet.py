@@ -1,124 +1,261 @@
-"""Student Marksheet Automation (High Volume) - Python, standard library only."""
-import csv, os, random, time
+
+"""Student Marksheet Automation - Python Standard Library"""
+
+import csv
+import os
+import random
+import time
 
 SUBJECTS = ["Maths", "Physics", "Chemistry", "English", "Computer"]
-MAX_MARKS = 100          # per subject
-PASS_MARKS = 40          # minimum in every subject
+MAX_MARKS = 100
+PASS_MARKS = 40
+
 
 def get_grade(pct):
-    """Return grade letter for a percentage."""
-    for limit, grade in [(90, "A+"), (80, "A"), (70, "B"), (60, "C"), (50, "D"), (40, "E")]:
-        if pct >= limit:
-            return grade
+    if pct >= 90:
+        return "A+"
+    elif pct >= 80:
+        return "A"
+    elif pct >= 70:
+        return "B"
+    elif pct >= 60:
+        return "C"
+    elif pct >= 50:
+        return "D"
+    elif pct >= 40:
+        return "E"
     return "F"
 
+
 def process_student(roll, name, marks):
-    """Validate marks and calculate total, percentage, grade and result."""
     if len(marks) != len(SUBJECTS):
-        raise ValueError("Need marks for all subjects")
-    for m in marks:
-        if not 0 <= m <= MAX_MARKS:
-            raise ValueError(f"Marks must be between 0 and {MAX_MARKS}")
+        raise ValueError("Marks required for all 5 subjects")
+
+    for mark in marks:
+        if not 0 <= mark <= MAX_MARKS:
+            raise ValueError("Marks must be between 0 and 100")
+
     total = sum(marks)
-    pct = round(total / (MAX_MARKS * len(SUBJECTS)) * 100, 2)
-    passed = all(m >= PASS_MARKS for m in marks)
-    return {"roll": roll, "name": name, "marks": marks, "total": total, "pct": pct,
-            "grade": get_grade(pct) if passed else "F",
-            "result": "PASS" if passed else "FAIL", "rank": 0}
+    percentage = round(total / (MAX_MARKS * len(SUBJECTS)) * 100, 2)
+    passed = all(mark >= PASS_MARKS for mark in marks)
+
+    return {
+        "roll": roll,
+        "name": name,
+        "marks": marks,
+        "total": total,
+        "pct": percentage,
+        "grade": get_grade(percentage) if passed else "F",
+        "result": "PASS" if passed else "FAIL",
+        "rank": 0,
+    }
+
 
 def assign_ranks(students):
-    """Rank by total (highest first). Equal totals share a rank (1,2,2,4)."""
     ordered = sorted(students, key=lambda s: -s["total"])
-    for i, s in enumerate(ordered):
-        s["rank"] = ordered[i - 1]["rank"] if i and s["total"] == ordered[i - 1]["total"] else i + 1
+
+    for i, student in enumerate(ordered):
+        if i > 0 and student["total"] == ordered[i - 1]["total"]:
+            student["rank"] = ordered[i - 1]["rank"]
+        else:
+            student["rank"] = i + 1
+
     return ordered
 
+
 def load_csv(path):
-    """Read roll,name,<subject marks...>. Bad rows are skipped and reported."""
-    good, bad = [], []
-    with open(path, newline="") as f:
-        for n, row in enumerate(csv.reader(f), start=2):
-            if n == 2 and row[0].lower() == "roll":
+    """Load CSV safely and report invalid rows."""
+    good = []
+    bad = []
+
+    with open(path, "r", newline="", encoding="utf-8-sig") as file:
+        reader = csv.reader(file)
+
+        for row_number, row in enumerate(reader, start=1):
+            # Ignore blank rows
+            if not row or not any(cell.strip() for cell in row):
                 continue
+
+            # Ignore the header, even if it has spaces or capital letters
+            if row[0].strip().lower() == "roll":
+                continue
+
             try:
-                good.append(process_student(row[0], row[1], [float(x) for x in row[2:]]))
-            except (ValueError, IndexError) as e:
-                bad.append((n, str(e)))
+                # 1 roll + 1 name + 5 subject marks
+                expected_columns = 2 + len(SUBJECTS)
+
+                if len(row) != expected_columns:
+                    raise ValueError(
+                        f"Expected {expected_columns} columns, "
+                        f"but found {len(row)}"
+                    )
+
+                roll = row[0].strip()
+                name = row[1].strip()
+
+                if not roll or not name:
+                    raise ValueError("Roll number or name is missing")
+
+                marks = [float(value.strip()) for value in row[2:]]
+
+                student = process_student(roll, name, marks)
+                good.append(student)
+
+            except ValueError as error:
+                bad.append((row_number, str(error)))
+
     return good, bad
 
-def marksheet_text(s, total_students):
+
+def marksheet_text(student, total_students):
     line = "=" * 46
-    out = [line, "         STUDENT MARKSHEET", line,
-           f"Roll No : {s['roll']}", f"Name    : {s['name']}", "-" * 46,
-           f"{'Subject':<16}{'Marks':>8}{'Out of':>8}"]
-    out += [f"{sub:<16}{m:>8g}{MAX_MARKS:>8}" for sub, m in zip(SUBJECTS, s["marks"])]
-    out += ["-" * 46, f"Total      : {s['total']:g} / {MAX_MARKS * len(SUBJECTS)}",
-            f"Percentage : {s['pct']}%", f"Grade      : {s['grade']}",
-            f"Result     : {s['result']}", f"Rank       : {s['rank']} of {total_students}", line]
-    return "\n".join(out)
+
+    output = [
+        line,
+        "         STUDENT MARKSHEET",
+        line,
+        f"Roll No : {student['roll']}",
+        f"Name    : {student['name']}",
+        "-" * 46,
+        f"{'Subject':<16}{'Marks':>8}{'Out of':>8}",
+    ]
+
+    for subject, mark in zip(SUBJECTS, student["marks"]):
+        output.append(f"{subject:<16}{mark:>8g}{MAX_MARKS:>8}")
+
+    output.extend([
+        "-" * 46,
+        f"Total      : {student['total']:g} / {MAX_MARKS * len(SUBJECTS)}",
+        f"Percentage : {student['pct']}%",
+        f"Grade      : {student['grade']}",
+        f"Result     : {student['result']}",
+        f"Rank       : {student['rank']} of {total_students}",
+        line,
+    ])
+
+    return "\n".join(output)
+
 
 def save_all(students, folder="marksheets"):
-    """Write one printable marksheet per student plus a combined results.csv."""
     os.makedirs(folder, exist_ok=True)
-    for s in students:
-        with open(os.path.join(folder, f"{s['roll']}.txt"), "w") as f:
-            f.write(marksheet_text(s, len(students)))
-    with open(os.path.join(folder, "results.csv"), "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["Rank", "Roll", "Name"] + SUBJECTS + ["Total", "Percentage", "Grade", "Result"])
-        for s in students:
-            w.writerow([s["rank"], s["roll"], s["name"]] + s["marks"] +
-                       [s["total"], s["pct"], s["grade"], s["result"]])
+
+    for student in students:
+        filename = f"{student['roll']}.txt"
+        filepath = os.path.join(folder, filename)
+
+        with open(filepath, "w", encoding="utf-8") as file:
+            file.write(marksheet_text(student, len(students)))
+
+    results_path = os.path.join(folder, "results.csv")
+
+    with open(results_path, "w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+
+        writer.writerow(
+            ["Rank", "Roll", "Name"]
+            + SUBJECTS
+            + ["Total", "Percentage", "Grade", "Result"]
+        )
+
+        for student in students:
+            writer.writerow(
+                [student["rank"], student["roll"], student["name"]]
+                + student["marks"]
+                + [
+                    student["total"],
+                    student["pct"],
+                    student["grade"],
+                    student["result"],
+                ]
+            )
+
 
 def class_summary(students):
-    n = len(students)
-    passed = sum(s["result"] == "PASS" for s in students)
-    print(f"Students: {n} | Pass: {passed} ({passed / n * 100:.1f}%) | "
-          f"Class average: {sum(s['pct'] for s in students) / n:.2f}%")
-    print("Grades:", {g: sum(s["grade"] == g for s in students) for g in ["A+", "A", "B", "C", "D", "E", "F"]})
+    count = len(students)
 
-def make_demo_csv(path, n):
-    """Create a sample file with n students (to test high volume)."""
+    if count == 0:
+        print("No valid students available.")
+        return
+
+    passed = sum(student["result"] == "PASS" for student in students)
+    average = sum(student["pct"] for student in students) / count
+
+    print(f"\nStudents: {count}")
+    print(f"Pass: {passed} ({passed / count * 100:.1f}%)")
+    print(f"Fail: {count - passed}")
+    print(f"Class average: {average:.2f}%")
+
+    grades = ["A+", "A", "B", "C", "D", "E", "F"]
+    print("Grades:", {
+        grade: sum(student["grade"] == grade for student in students)
+        for grade in grades
+    })
+
+
+def make_demo_csv(path, count):
+    """Create sample student data for testing."""
     random.seed(1)
-    with open(path, "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["roll", "name"] + SUBJECTS)
-        for i in range(1, n + 1):
-            w.writerow([f"R{i:05d}", f"Student {i}"] + [random.randint(25, 100) for _ in SUBJECTS])
+
+    with open(path, "w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(["roll", "name"] + SUBJECTS)
+
+        for i in range(1, count + 1):
+            marks = [random.randint(25, 100) for _ in SUBJECTS]
+            writer.writerow([f"R{i:05d}", f"Student {i}"] + marks)
+
 
 def main():
     path = "students.csv"
 
     print(f"Processing {path}...")
 
-    if not os.path.exists(path):
+    if not os.path.isfile(path):
         print(f"ERROR: {path} not found.")
+        print("Place students.csv in the project directory.")
         return
 
-    t = time.time()
-    students, bad = load_csv(path)
+    start_time = time.time()
+
+    try:
+        students, bad = load_csv(path)
+    except (OSError, csv.Error) as error:
+        print(f"ERROR reading CSV: {error}")
+        return
 
     if not students:
         print("ERROR: No valid student rows found.")
+
+        for row_number, reason in bad[:10]:
+            print(f"Row {row_number}: {reason}")
+
         return
 
     students = assign_ranks(students)
-    save_all(students)
+
+    try:
+        save_all(students)
+    except OSError as error:
+        print(f"ERROR saving marksheets: {error}")
+        return
+
     class_summary(students)
 
-    print(
-        f"Skipped {len(bad)} bad rows. "
-        f"Marksheets saved in 'marksheets/' "
-        f"in {time.time() - t:.2f}s"
-    )
+    print(f"\nInvalid rows skipped: {len(bad)}")
 
-    print(
-        "\nTop 3:",
-        [(s["rank"], s["name"], s["total"]) for s in students[:3]]
-    )
+    for row_number, reason in bad[:10]:
+        print(f"Row {row_number}: {reason}")
+
+    print(f"\nMarksheets saved in 'marksheets/'")
+    print(f"Processing time: {time.time() - start_time:.2f} seconds")
+
+    print("\nTop 3 students:")
+    for student in students[:3]:
+        print(
+            f"Rank {student['rank']}: "
+            f"{student['name']} - {student['total']} marks"
+        )
 
 
-if __name__ == "__main__":
-    main()
 if __name__ == "__main__":
     main()
