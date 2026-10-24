@@ -1,0 +1,81 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Student Marksheet Automation</title>
+<style>
+:root{--bg:#eef3fb;--card:#fff;--ink:#1c2a44;--mu:#6b7a93;--ln:#e3eaf5;--ac:#3b6bff;--ok:#0a7d52;--okb:#e6f9f1;--er:#b42318;--erb:#fff0ee;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0a1020;--card:#131c33;--ink:#e8eefb;--mu:#93a3c0;--ln:#25314d;--ok:#4ade9f;--okb:#0f2a22;--er:#ff8b7e;--erb:#2e1717}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+.hero{background:linear-gradient(135deg,#0b1630,#1c3a85);color:#fff;padding:26px max(20px,calc((100% - 1100px)/2)) 64px}
+h1{margin:0;font-size:clamp(20px,3vw,27px)}.hero p{margin:5px 0 0;color:#b9c8ea;font-size:13px}
+main{max-width:1100px;margin:-40px auto 30px;padding:0 20px}.card{background:var(--card);border:1px solid var(--ln);border-radius:20px;padding:20px;margin-bottom:18px;box-shadow:0 14px 34px #0b163012}
+h2{font-size:17px;margin:0 0 12px}.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button,.btn{border:0;border-radius:10px;padding:11px 15px;font-weight:700;font-size:13px;cursor:pointer;background:var(--ac);color:#fff;font-family:inherit}
+.s{background:#3b6bff18;color:var(--ac)}.d{background:var(--erb);color:var(--er)}
+input,select{padding:10px 12px;border:1px solid var(--ln);border-radius:10px;background:var(--bg);color:var(--ink);font-size:14px;font-family:inherit}
+.add{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:12px}.add input{width:100%}
+.kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}.k{background:var(--bg);border-radius:14px;padding:12px}.k span{font-size:11px;color:var(--mu)}.k b{display:block;font-size:22px}
+.gd{display:flex;gap:8px;align-items:flex-end;height:90px;margin:10px 0}.gd div{flex:1;text-align:center;font-size:11px;color:var(--mu)}.gd i{display:block;background:var(--ac);border-radius:6px 6px 0 0;margin-bottom:3px}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:9px 10px;border-bottom:1px solid var(--ln);text-align:left;white-space:nowrap}
+th{color:var(--mu);font-size:11px;text-transform:uppercase;cursor:pointer}tr.r:hover{background:#3b6bff0f;cursor:pointer}
+.g{font-weight:800;padding:2px 8px;border-radius:99px;background:#3b6bff18;color:var(--ac)}.F,.FAIL{color:var(--er);background:var(--erb)}.PASS{color:var(--ok);background:var(--okb)}
+.pg{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:13px;color:var(--mu)}
+#msg{font-size:13px;margin-top:10px;color:var(--mu)}
+#ov{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;padding:16px;z-index:9}#ov.on{display:flex}
+.ms{background:#fff;color:#111;width:min(420px,100%);max-height:92vh;overflow:auto;border-radius:14px;padding:22px;border:3px double #1c2a44}
+.ms h3{text-align:center;margin:0 0 4px;letter-spacing:.08em}.ms .c{text-align:center;font-size:12px;color:#555;margin-bottom:12px}
+.ms table td,.ms table th{border-bottom:1px solid #ddd;color:#111;cursor:default}.ms .t{margin-top:10px;font-size:14px;line-height:1.7}
+#pa{display:none}
+@media print{body>*:not(#pa){display:none!important}#pa{display:block}.ms{page-break-after:always;border:3px double #000;margin:0 auto 20px;max-height:none}}
+</style></head><body>
+<div class="hero"><h1>📄 Student Marksheet Automation</h1><p>High-volume processing · totals, percentages, grades, ranks · printable marksheets</p></div>
+<main>
+<div class="card"><h2>1. Load student data</h2><div class="bar">
+<label class="btn">Upload CSV<input type="file" id="f" accept=".csv" hidden></label>
+<select id="n"><option>100</option><option>1000</option><option selected>5000</option><option>10000</option></select>
+<button class="s" id="gen">Generate demo students</button><button class="s" id="tpl">Download CSV template</button></div>
+<p id="msg">CSV format: roll,name,Maths,Physics,Chemistry,English,Computer (marks out of 100).</p>
+<div class="add"><input id="ar" placeholder="Roll"><input id="an" placeholder="Name"><input id="m0" type="number" placeholder="Maths"><input id="m1" type="number" placeholder="Physics"><input id="m2" type="number" placeholder="Chemistry"><input id="m3" type="number" placeholder="English"><input id="m4" type="number" placeholder="Computer"><button id="add">Add student</button></div></div>
+<div class="card"><h2>2. Class results</h2><div class="kp"><div class="k"><span>Students</span><b id="k1">0</b></div><div class="k"><span>Pass %</span><b id="k2">-</b></div><div class="k"><span>Class average</span><b id="k3">-</b></div><div class="k"><span>Topper</span><b id="k4">-</b></div><div class="k"><span>Processed in</span><b id="k5">-</b></div></div>
+<div class="gd" id="gd"></div>
+<div class="bar"><input id="q" placeholder="Search name or roll" style="flex:1;min-width:160px"><button class="s" id="ex">Export CSV</button><button class="s" id="pr">Print all marksheets</button><button class="d" id="cl">Clear</button></div>
+<div class="tw"><table><thead><tr id="th"></tr></thead><tbody id="tb"></tbody></table></div>
+<div class="pg"><span id="pi"></span><span><button class="s" id="pv">Prev</button> <button class="s" id="nx">Next</button></span></div></div></main>
+<div id="ov"><div id="mo"></div></div><div id="pa"></div>
+<script>
+const SUB=["Maths","Physics","Chemistry","English","Computer"],MAX=100,PASS=40,PS=15;
+let S=[],page=0,key="rank",asc=true,q="";const $=i=>document.getElementById(i);
+const grade=p=>p>=90?"A+":p>=80?"A":p>=70?"B":p>=60?"C":p>=50?"D":p>=40?"E":"F";
+function proc(roll,name,m){if(m.length!==5||m.some(x=>isNaN(x)||x<0||x>MAX))throw 0;const t=m.reduce((a,b)=>a+b,0),pct=+(t/5).toFixed(2),ok=m.every(x=>x>=PASS);
+ return{roll,name,m,t,pct,g:ok?grade(pct):"F",res:ok?"PASS":"FAIL",rank:0}}
+function rankAll(){const o=[...S].sort((a,b)=>b.t-a.t);o.forEach((s,i)=>s.rank=i&&s.t===o[i-1].t?o[i-1].rank:i+1)}
+function load(rows,t0){let bad=0;S=[];const seen=new Set();rows.forEach(r=>{try{if(!r[0]||seen.has(r[0]))throw 0;seen.add(r[0]);S.push(proc(r[0],r[1],r.slice(2,7).map(Number)))}catch(e){bad++}});
+ rankAll();page=0;show();$("k5").textContent=(performance.now()-t0).toFixed(0)+" ms";$("msg").textContent=S.length+" students loaded. "+bad+" invalid or duplicate rows skipped."}
+function show(){const n=S.length,p=S.filter(s=>s.res==="PASS").length;
+ $("k1").textContent=n;$("k2").textContent=n?(p/n*100).toFixed(1)+"%":"-";$("k3").textContent=n?(S.reduce((a,s)=>a+s.pct,0)/n).toFixed(1)+"%":"-";
+ const top=S.find(s=>s.rank===1);$("k4").textContent=top?top.name:"-";
+ const G=["A+","A","B","C","D","E","F"],c=G.map(g=>S.filter(s=>s.g===g).length),mx=Math.max(1,...c);
+ $("gd").innerHTML=G.map((g,i)=>`<div><i style="height:${c[i]/mx*60}px"></i>${g}<br>${c[i]}</div>`).join("");
+ const cols=[["rank","Rank"],["roll","Roll"],["name","Name"],["t","Total"],["pct","%"],["g","Grade"],["res","Result"]];
+ $("th").innerHTML=cols.map(c=>`<th data-k="${c[0]}">${c[1]}${key===c[0]?(asc?" ▲":" ▼"):""}</th>`).join("");
+ $("th").querySelectorAll("th").forEach(h=>h.onclick=()=>{asc=key===h.dataset.k?!asc:true;key=h.dataset.k;page=0;show()});
+ let L=S.filter(s=>!q||(s.name+s.roll).toLowerCase().includes(q));
+ L.sort((a,b)=>(a[key]>b[key]?1:a[key]<b[key]?-1:0)*(asc?1:-1));
+ const pages=Math.max(1,Math.ceil(L.length/PS));page=Math.min(page,pages-1);
+ $("tb").innerHTML=L.slice(page*PS,page*PS+PS).map(s=>`<tr class="r" data-r="${s.roll}"><td>${s.rank}</td><td>${s.roll}</td><td>${s.name}</td><td>${s.t}</td><td>${s.pct}</td><td><span class="g ${s.g}">${s.g}</span></td><td><span class="g ${s.res}">${s.res}</span></td></tr>`).join("")||'<tr><td colspan="7">No data yet. Upload a CSV or generate demo students.</td></tr>';
+ $("tb").querySelectorAll("tr.r").forEach(r=>r.onclick=()=>{$("mo").innerHTML=sheet(S.find(s=>s.roll===r.dataset.r))+'<div style="text-align:center;margin-top:10px"><button id="p1">Print</button> <button class="s" id="x">Close</button></div>';$("ov").classList.add("on");
+  $("x").onclick=()=>$("ov").classList.remove("on");$("p1").onclick=()=>{$("pa").innerHTML=sheet(S.find(s=>s.roll===r.dataset.r));window.print()}});
+ $("pi").textContent=L.length?`Page ${page+1} of ${pages} · ${L.length} students`:""}
+function sheet(s){return`<div class="ms"><h3>STUDENT MARKSHEET</h3><div class="c">Roll No: ${s.roll} · Name: ${s.name}</div><table><tr><th>Subject</th><th>Marks</th><th>Out of</th></tr>${SUB.map((x,i)=>`<tr><td>${x}</td><td>${s.m[i]}</td><td>${MAX}</td></tr>`).join("")}</table><div class="t"><b>Total:</b> ${s.t} / ${MAX*5}<br><b>Percentage:</b> ${s.pct}%<br><b>Grade:</b> ${s.g} &nbsp; <b>Result:</b> ${s.res}<br><b>Rank:</b> ${s.rank} of ${S.length}</div></div>`}
+$("gen").onclick=()=>{const t0=performance.now(),n=+$("n").value,r=[];let x=1;const rnd=()=>(x=x*16807%2147483647)/2147483647;
+ for(let i=1;i<=n;i++)r.push(["R"+String(i).padStart(5,"0"),"Student "+i,...SUB.map(()=>Math.floor(25+rnd()*76))]);load(r,t0)};
+$("f").onchange=e=>{const fl=e.target.files[0];if(!fl)return;const rd=new FileReader();rd.onload=()=>{const t0=performance.now(),rows=rd.result.split(/\r?\n/).filter(l=>l.trim()).map(l=>l.split(",").map(x=>x.trim()));if(rows.length&&isNaN(rows[0][2]))rows.shift();load(rows,t0)};rd.readAsText(fl);e.target.value=""};
+$("add").onclick=()=>{try{const s=proc($("ar").value.trim(),$("an").value.trim(),[0,1,2,3,4].map(i=>$("m"+i).value===""?NaN:+$("m"+i).value));if(!s.roll||!s.name||S.some(x=>x.roll===s.roll))throw 0;S.push(s);rankAll();show();$("msg").textContent="Added "+s.name+".";["ar","an","m0","m1","m2","m3","m4"].forEach(i=>$(i).value="")}catch(e){$("msg").textContent="Enter a unique roll, a name and 5 marks between 0 and 100."}};
+$("q").oninput=e=>{q=e.target.value.toLowerCase();page=0;show()};$("pv").onclick=()=>{page=Math.max(0,page-1);show()};$("nx").onclick=()=>{page++;show()};
+$("cl").onclick=()=>{S=[];show();$("k5").textContent="-";$("msg").textContent="Cleared."};
+$("pr").onclick=()=>{if(!S.length)return;if(S.length>300&&!confirm("Print "+S.length+" marksheets? Only the first 300 will be printed at once."))return;$("pa").innerHTML=[...S].sort((a,b)=>a.rank-b.rank).slice(0,300).map(sheet).join("");window.print()};
+function dl(name,txt){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type:"text/csv"}));a.download=name;a.click()}
+$("ex").onclick=()=>{if(S.length)dl("results.csv",["Rank,Roll,Name,"+SUB.join(",")+",Total,Percentage,Grade,Result",...[...S].sort((a,b)=>a.rank-b.rank).map(s=>[s.rank,s.roll,s.name,...s.m,s.t,s.pct,s.g,s.res].join(","))].join("\n"))};
+$("tpl").onclick=()=>dl("students_template.csv","roll,name,"+SUB.join(",")+"\nR00001,Asha Patil,78,85,69,74,90\nR00002,Rohan Deshmukh,55,48,62,70,66");
+show();
+</script></body></html>
