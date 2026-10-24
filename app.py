@@ -95,9 +95,13 @@ def process_upload():
     return ms.assign_ranks(students), bad, None
 
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
 @app.route("/", methods=["GET"])
 def home():
-    return render_template_string(PAGE)
+    # Designed page (all calculation runs in the browser via JavaScript)
+    return send_file(os.path.join(BASE_DIR, "index.html"))
 
 
 @app.route("/healthz")
