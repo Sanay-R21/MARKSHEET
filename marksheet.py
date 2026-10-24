@@ -87,30 +87,38 @@ def make_demo_csv(path, n):
             w.writerow([f"R{i:05d}", f"Student {i}"] + [random.randint(25, 100) for _ in SUBJECTS])
 
 def main():
-    while True:
-        print("\n1. Generate demo data  2. Process CSV file  3. Exit")
-        c = input("Choose: ").strip()
-        if c == "1":
-            n = input("How many students? ").strip()
-            make_demo_csv("students.csv", int(n) if n.isdigit() else 1000)
-            print("students.csv created.")
-        elif c == "2":
-            path = input("CSV file name [students.csv]: ").strip() or "students.csv"
-            if not os.path.exists(path):
-                print("File not found."); continue
-            t = time.time()
-            students, bad = load_csv(path)
-            if not students:
-                print("No valid rows."); continue
-            students = assign_ranks(students)
-            save_all(students)
-            class_summary(students)
-            print(f"Skipped {len(bad)} bad rows. Marksheets saved in 'marksheets/' in {time.time() - t:.2f}s")
-            print("\nTop 3:", [(s["rank"], s["name"], s["total"]) for s in students[:3]])
-        elif c == "3":
-            break
-        else:
-            print("Invalid choice.")
+    path = "students.csv"
 
+    print(f"Processing {path}...")
+
+    if not os.path.exists(path):
+        print(f"ERROR: {path} not found.")
+        return
+
+    t = time.time()
+    students, bad = load_csv(path)
+
+    if not students:
+        print("ERROR: No valid student rows found.")
+        return
+
+    students = assign_ranks(students)
+    save_all(students)
+    class_summary(students)
+
+    print(
+        f"Skipped {len(bad)} bad rows. "
+        f"Marksheets saved in 'marksheets/' "
+        f"in {time.time() - t:.2f}s"
+    )
+
+    print(
+        "\nTop 3:",
+        [(s["rank"], s["name"], s["total"]) for s in students[:3]]
+    )
+
+
+if __name__ == "__main__":
+    main()
 if __name__ == "__main__":
     main()
